@@ -3,19 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OARA HNBC - Flagship Store</title>
+    <title>OARA - Science of HNBC</title>
     
-    <!-- 1. 引入 React 和 ReactDOM (使用生产版本以提高稳定性) -->
+    <!-- 核心依赖 -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- 2. 引入 Babel (用于编译 JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 3. 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- 配置 Tailwind 字体 -->
     <script>
         tailwind.config = {
             theme: {
@@ -24,26 +19,51 @@
                         sans: ['Inter', 'sans-serif'],
                     },
                     colors: {
-                        highlight: '#f6ee52',
+                        brandYellow: '#f6ee52',
+                        brandBlack: '#000000',
+                        brandGreen: '#059669', // 用于环保板块
+                        brandGold: '#F59E0B',
+                        brandPlatinum: '#E5E7EB',
+                    },
+                    animation: {
+                        'marquee': 'marquee 25s linear infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient-x': 'gradientX 15s ease infinite',
+                    },
+                    keyframes: {
+                        marquee: {
+                            '0%': { transform: 'translateX(100%)' },
+                            '100%': { transform: 'translateX(-100%)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        gradientX: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        /* 自定义滚动条样式 */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 动态极光背景 */
+        .aurora-bg {
+            background: linear-gradient(-45deg, #000000, #1a1a1a, #333333, #f6ee52);
+            background-size: 400% 400%;
+            animation: gradientX 15s ease infinite;
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 3px;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        /* 玻璃拟态 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
@@ -53,433 +73,426 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- 自定义图标库 (解决 CDN 加载报错问题) ---
-        // 使用 SVG 路径直接渲染，确保 100% 稳定
+        // --- 0. 图标库 ---
         const Icon = ({ path, size = 24, className = "" }) => (
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width={size} 
-                height={size} 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className={className}
-            >
-                {path}
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
         );
 
         const Icons = {
-            ShoppingBag: (props) => <Icon {...props} path={<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></>} />,
-            User: (props) => <Icon {...props} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />,
-            Search: (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />,
-            Globe: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></>} />,
-            MapPin: (props) => <Icon {...props} path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />,
-            CheckCircle: (props) => <Icon {...props} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
-            ArrowRight: (props) => <Icon {...props} path={<><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>} />,
-            Menu: (props) => <Icon {...props} path={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} />,
-            X: (props) => <Icon {...props} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />,
-            Zap: (props) => <Icon {...props} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />,
-            Shield: (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></>} />,
-            Battery: (props) => <Icon {...props} path={<><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></>} />,
-            ChevronRight: (props) => <Icon {...props} path={<><path d="m9 18 6-6-6-6"/></>} />,
-            Star: (props) => <Icon {...props} path={<><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>} />,
+            ShoppingBag: (p) => <Icon {...p} path={<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></>} />,
+            User: (p) => <Icon {...p} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />,
+            Search: (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />,
+            Menu: (p) => <Icon {...p} path={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} />,
+            X: (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />,
+            Plus: (p) => <Icon {...p} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
+            Minus: (p) => <Icon {...p} path={<><line x1="5" y1="12" x2="19" y2="12"/></>} />,
+            MapPin: (p) => <Icon {...p} path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />,
+            ChevronDown: (p) => <Icon {...p} path={<><path d="m6 9 6 6 6-6"/></>} />,
+            ChevronRight: (p) => <Icon {...p} path={<><path d="m9 18 6-6-6-6"/></>} />,
+            Star: (p) => <Icon {...p} path={<><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>} />,
+            Zap: (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />,
+            Droplet: (p) => <Icon {...p} path={<><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></>} />,
+            MessageCircle: (p) => <Icon {...p} path={<><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></>} />,
+            QrCode: (p) => <Icon {...p} path={<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>} />,
+            Microscope: (p) => <Icon {...p} path={<><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></>} />,
+            Recycle: (p) => <Icon {...p} path={<><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 7.196 9.5 3.1 9.5a1.83 1.83 0 0 1-1.582-.881 1.785 1.785 0 0 1-.004-1.784l4.296-7.882a1.833 1.833 0 0 1 1.582-.892h8.605a1.832 1.832 0 0 1 1.582.892l4.296 7.882a1.785 1.785 0 0 1-.004 1.784L19.91 13.5"/></>} />,
+            Mail: (p) => <Icon {...p} path={<><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>} />,
+            Phone: (p) => <Icon {...p} path={<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></>} />,
+            Cpu: (p) => <Icon {...p} path={<><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></>} />,
+            Gift: (p) => <Icon {...p} path={<><polyline points="20 12 20 22 4 22 4 12"/><rect width="20" height="5" x="2" y="7" rx="1"/><line x1="12" x2="12" y1="22" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></>} />,
+            Award: (p) => <Icon {...p} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />,
+            Box: (p) => <Icon {...p} path={<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>} />,
+            Leaf: (p) => <Icon {...p} path={<><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></>} />,
+            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5h4"/><path d="M19 19v4"/><path d="M15 21h4"/></>} />,
+            Bot: (p) => <Icon {...p} path={<><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" x2="8" y1="16" y2="16"/><line x1="16" x2="16" y1="16" y2="16"/></>} />,
+            CheckCircle: (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
+            Clock: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />,
+            Lock: (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />,
+            Unlock: (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />,
+            Truck: (p) => <Icon {...p} path={<><rect width="16" height="13" x="1" y="3" rx="2" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></>} />,
         };
-        
-        // 直接解构使用
-        const { ShoppingBag, User, Search, Globe, MapPin, CheckCircle, ArrowRight, Menu, X, Zap, Shield, Battery, ChevronRight, Star } = Icons;
-        // ---------------------------------------------
+        const { ShoppingBag, User, Search, Menu, X, Plus, Minus, MapPin, ChevronDown, Star, Zap, Droplet, MessageCircle, QrCode, Microscope, Recycle, Mail, Phone, Cpu, Gift, Award, Box, Leaf, Sparkles, Bot, CheckCircle, Clock, Lock, Unlock, Truck } = Icons;
 
-        const OARAWebsiteSingleProduct = () => {
-            const [isScrolled, setIsScrolled] = useState(false);
-            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-            const [serialNumber, setSerialNumber] = useState('');
-            const [checkStatus, setCheckStatus] = useState(null); // null, 'checking', 'verified'
+        // --- 1. Top Components ---
+        const PromoTicker = () => (
+            <div className="bg-brandBlack text-brandYellow py-2 overflow-hidden relative z-[60]">
+                <div className="whitespace-nowrap animate-marquee flex items-center gap-10 text-xs font-bold tracking-widest uppercase">
+                    <span>New Science: 95% Less Harmful Chemicals</span><span>•</span><span>Join Green Action: Recycle & Earn Points</span><span>•</span><span>Free Shipping on orders over $100</span>
+                </div>
+            </div>
+        );
 
-            // Scroll effect for sticky header
-            useEffect(() => {
-                const handleScroll = () => {
-                    setIsScrolled(window.scrollY > 50);
-                };
-                window.addEventListener('scroll', handleScroll);
-                return () => window.removeEventListener('scroll', handleScroll);
-            }, []);
+        // --- 2. AI FAQ ---
+        const AIFAQSection = () => {
+            const [query, setQuery] = useState('');
+            const [isSearching, setIsSearching] = useState(false);
+            const [answer, setAnswer] = useState(null);
 
-            const handleCheck = (e) => {
+            const handleSearch = (e) => {
                 e.preventDefault();
-                setCheckStatus('checking');
+                setIsSearching(true);
                 setTimeout(() => {
-                    setCheckStatus('verified');
+                    setIsSearching(false);
+                    setAnswer({
+                        text: "Based on our latest lab data, OARA HNBC reduces harmful substances by 95% compared to traditional cigarettes. This is achieved through our Circumferential Heating Technology which operates at < 350°C, preventing combustion.",
+                        source: "Source: OARA R&D Lab Report 2025"
+                    });
                 }, 1500);
             };
 
             return (
-                <div className="font-sans bg-white text-[#1d1d1f] selection:bg-[#f6ee52] selection:text-black">
-                
-                {/* === 1. Sticky Header / Utility Bar === */}
-                <header 
-                    className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                    isScrolled ? 'bg-white/80 backdrop-blur-md border-b border-gray-200 py-3' : 'bg-transparent py-5'
-                    }`}
-                >
-                    <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-                    {/* Logo - Image */}
-                    <a href="#" className="flex items-center select-none">
-                         {/* 请确保同目录下有 OARA LOGO.png */}
-                        <img 
-                        src="OARA LOGO.png" 
-                        alt="OARA Tech" 
-                        className="h-10 w-auto md:h-12 object-contain hover:opacity-80 transition-opacity"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                        }} 
-                        />
-                        {/* 图片加载失败时的备用文字Logo */}
-                        <div className="hidden text-2xl font-bold tracking-tighter flex items-center gap-2">
-                            <div className="w-8 h-8 bg-[#f6ee52] rounded-sm flex items-center justify-center">
-                                <span className="text-black font-black text-sm">O</span>
-                            </div>
-                            OARA <span className="text-xs font-normal text-gray-500 tracking-[0.2em] ml-1">TECH</span>
+                <section className="py-20 bg-white border-t border-gray-100">
+                    <div className="max-w-4xl mx-auto px-6">
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-1 rounded-full text-xs font-bold mb-4"><Bot size={16} /> AI-Powered Support</div>
+                            <h2 className="text-3xl font-black">Ask OARA AI</h2>
+                            <p className="text-gray-500 mt-2">Get instant, scientifically accurate answers about our products.</p>
                         </div>
-                    </a>
-
-                    {/* Desktop Nav */}
-                    <nav className="hidden md:flex items-center gap-10 text-sm font-medium text-gray-500">
-                        <a href="#product-overview" className="hover:text-black transition-colors">OARA HNBC</a>
-                        <a href="#technology" className="hover:text-black transition-colors">Technology</a>
-                        <a href="#checklist" className="hover:text-black transition-colors">Service</a>
-                    </nav>
-
-                    {/* Utility Icons */}
-                    <div className="flex items-center gap-4 md:gap-6 text-gray-800">
-                        {/* Currency & Language Switcher */}
-                        <button className="text-xs font-bold border border-gray-300 rounded px-3 py-1 hover:border-black hover:bg-black hover:text-white transition-all flex items-center gap-1.5">
-                        <span>EN</span>
-                        <span className="text-gray-400">|</span>
-                        <span>USD</span>
-                        </button>
-                        
-                        <button className="hover:text-black hover:bg-gray-100 p-1.5 rounded-full transition-colors">
-                        <Search size={20} strokeWidth={1.5} />
-                        </button>
-                        
-                        <button className="hover:text-black hover:bg-gray-100 p-1.5 rounded-full transition-colors group relative">
-                        <User size={20} strokeWidth={1.5} />
-                        <span className="absolute top-10 right-0 w-max bg-black text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                            SIGN IN
-                        </span>
-                        </button>
-                        
-                        <button className="hover:text-black hover:bg-gray-100 p-1.5 rounded-full transition-colors relative">
-                        <ShoppingBag size={20} strokeWidth={1.5} />
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-[#f6ee52] border border-white rounded-full"></span>
-                        </button>
-                        
-                        <button className="md:hidden text-black" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                        </button>
-                    </div>
-                    </div>
-                </header>
-
-                {/* Mobile Menu */}
-                {mobileMenuOpen && (
-                    <div className="fixed inset-0 z-40 bg-white pt-24 px-6 md:hidden">
-                    <div className="flex flex-col gap-8 text-2xl font-bold text-gray-900">
-                        <a href="#" className="border-b border-gray-100 pb-4 text-black">OARA HNBC</a>
-                        <a href="#" className="border-b border-gray-100 pb-4">Technology</a>
-                        <a href="#" className="border-b border-gray-100 pb-4">Support</a>
-                    </div>
-                    </div>
-                )}
-
-                {/* === 2. Hero Section (Focus on HNBC) === */}
-                <section className="relative w-full h-screen min-h-[700px] flex items-center justify-center overflow-hidden pt-20 bg-[#fbfbfd]">
-                    {/* Subtle Background Gradient */}
-                    <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent to-gray-100/50"></div>
-                    
-                    <div className="relative z-10 text-center max-w-5xl px-6 flex flex-col items-center">
-                    <span className="text-black font-mono tracking-widest text-xs mb-6 border border-black/10 px-3 py-1 rounded-full uppercase bg-white shadow-sm">
-                        The Flagship
-                    </span>
-                    <h1 className="text-6xl md:text-9xl font-bold text-black mb-4 tracking-tight leading-none">
-                        HNBC
-                    </h1>
-                    <p className="text-xl md:text-3xl text-gray-500 font-light mb-10 max-w-2xl leading-relaxed">
-                        Active Heat Control. <br/>
-                        <span className="text-black font-medium">The ultimate expression of OARA technology.</span>
-                    </p>
-                    
-                    <div className="flex flex-col sm:flex-row gap-6 w-full justify-center">
-                        {/* CTA Button */}
-                        <button className="bg-[#f6ee52] text-black px-12 py-4 rounded-full hover:bg-[#e0d840] hover:shadow-lg transition-all font-bold text-lg flex items-center justify-center gap-2">
-                        Buy Now <ArrowRight size={20} />
-                        </button>
-                    </div>
-
-                    {/* Abstract Product Placeholder */}
-                    <div className="mt-16 relative w-full max-w-lg aspect-[16/9] bg-white rounded-t-3xl shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.1)] border-t border-x border-gray-100 flex items-end justify-center overflow-hidden">
-                        <div className="text-gray-300 text-sm pb-10 font-mono tracking-widest">[ HNBC PRODUCT IMAGE ]</div>
-                        {/* Reflection Effect */}
-                        <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-gray-50 to-transparent"></div>
-                    </div>
+                        <div className="relative mb-12">
+                            <form onSubmit={handleSearch} className="relative z-10">
+                                <input type="text" placeholder="Ex: How does OARA compare to Marlboro regarding tar?" className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-5 pl-6 pr-32 outline-none focus:ring-2 focus:ring-brandYellow/50 text-lg shadow-sm transition-all" value={query} onChange={(e) => setQuery(e.target.value)} />
+                                <button type="submit" className="absolute right-2 top-2 bottom-2 bg-black text-white px-6 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors">{isSearching ? <span className="animate-spin">⟳</span> : <Sparkles size={16} />} Ask</button>
+                            </form>
+                            {answer && (<div className="mt-6 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 animate-fade-in relative overflow-hidden"><div className="flex gap-4"><div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shrink-0"><Bot size={20} /></div><div><h4 className="font-bold text-blue-900 mb-2">AI Generated Answer</h4><p className="text-gray-700 leading-relaxed mb-3">{answer.text}</p><p className="text-xs text-gray-400 font-mono">{answer.source}</p></div></div></div>)}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{["What is the nicotine content?", "Can I recycle the pods?", "How long is the battery life?", "Is it safer than vaping?"].map((q, i) => (<button key={i} onClick={() => setQuery(q)} className="text-left p-4 border border-gray-100 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium text-gray-600">{q}</button>))}</div>
                     </div>
                 </section>
+            );
+        };
 
-                {/* === 3. Product Detail Showcase (Full Width) === */}
-                <section id="product-overview" className="py-24 px-6 bg-white">
-                    <div className="max-w-7xl mx-auto">
-                    
-                    {/* HNBC Feature Card */}
-                    <div className="relative bg-[#f5f5f7] rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 min-h-[700px] flex flex-col md:flex-row items-center">
+        // --- 3. Store Locator ---
+        const StoreLocator = () => (
+            <section className="h-[500px] relative w-full bg-gray-200">
+                <div className="absolute inset-0 bg-[#e0e0e0] flex items-center justify-center opacity-70">
+                    <div className="text-center"><MapPin size={64} className="mx-auto mb-4 text-gray-400" /><p className="text-4xl font-black text-gray-400/50 tracking-widest uppercase">Global Map</p></div>
+                </div>
+                <div className="absolute top-10 left-6 md:left-20 bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-2xl w-[90%] md:w-[380px]">
+                    <h3 className="text-xl font-bold text-black mb-4">Find a Retailer</h3>
+                    <div className="relative mb-6"><Search className="absolute left-3 top-3.5 text-gray-400" size={18} /><input type="text" placeholder="City or Postal Code" className="w-full bg-gray-50 border border-gray-200 text-black rounded-lg pl-10 pr-4 py-3 outline-none focus:border-black transition-colors" /></div>
+                    <div className="h-48 overflow-y-auto space-y-3 pr-2">{[1, 2, 3].map(i => (<div key={i} className="p-4 hover:bg-gray-50 rounded-xl cursor-pointer border border-transparent hover:border-gray-200 transition-all"><h4 className="font-bold text-black">OARA Store - Downtown</h4><p className="text-sm text-gray-500 mt-1">123 Tech Avenue, Innovation District</p><p className="text-xs text-green-600 mt-2 font-medium">● Open Now</p></div>))}</div>
+                </div>
+            </section>
+        );
+
+        // --- 主程序 ---
+        const OARAWeb = () => {
+            const [activePage, setActivePage] = useState('home');
+            const [deviceView, setDeviceView] = useState('list');
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+            const [quantity, setQuantity] = useState(1);
+            const [selectedColor, setSelectedColor] = useState('silver');
+
+            const navigateTo = (page) => {
+                setActivePage(page);
+                if (page === 'device') { setDeviceView('list'); setSelectedProduct(null); }
+                setMobileMenuOpen(false);
+                window.scrollTo(0, 0);
+            };
+
+            const colors = {
+                silver: { name: 'Silver', hex: '#E3E3E3', imgGradient: 'from-gray-200 to-gray-400' },
+                blue: { name: 'Deep Blue', hex: '#1E3A8A', imgGradient: 'from-blue-700 to-black' },
+                gold: { name: 'Gold', hex: '#D4AF37', imgGradient: 'from-yellow-400 to-yellow-700' }
+            };
+
+            const products = [
+                { id: 'silver', name: 'i Heater Silver', colorKey: 'silver', price: '$99.00', desc: 'Classic elegance.' },
+                { id: 'blue', name: 'i Heater Blue', colorKey: 'blue', price: '$99.00', desc: 'Deep mystery.' },
+                { id: 'gold', name: 'i Heater Gold', colorKey: 'gold', price: '$129.00', desc: 'Limited Edition.' }
+            ];
+
+            const handleProductClick = (product) => {
+                setSelectedProduct(product);
+                setSelectedColor(product.colorKey);
+                setDeviceView('detail');
+                window.scrollTo(0, 0);
+            };
+
+            // --- Sub-Pages (Enhanced) ---
+
+            // 1. Device Page
+            const DevicePage = () => {
+                if (deviceView === 'list') {
+                    return (
+                        <div className="animate-fade-in pt-32 pb-20 bg-white">
+                            <div className="max-w-6xl mx-auto px-6">
+                                <h2 className="text-5xl font-black mb-16 text-center">Select Your Device</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">{products.map((p) => (<div key={p.id} onClick={() => handleProductClick(p)} className="group cursor-pointer"><div className="bg-[#f5f5f7] rounded-3xl h-96 flex items-center justify-center mb-6 relative overflow-hidden hover:shadow-xl transition-all"><div className={`w-24 h-64 bg-gradient-to-b ${colors[p.colorKey].imgGradient} rounded-full shadow-lg transform group-hover:scale-110 transition-transform duration-500`}></div></div><h3 className="text-2xl font-bold">{p.name}</h3><span className="text-gray-500">{p.price}</span></div>))}</div>
+                            </div>
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div className="animate-fade-in pt-24">
+                            <section className="py-12 bg-[#f9f9f9]">
+                                <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                                    <div className="bg-white rounded-3xl h-[500px] flex items-center justify-center shadow-sm relative"><button onClick={() => setDeviceView('list')} className="absolute top-6 left-6 text-sm font-bold flex items-center gap-1 hover:text-gray-600">← Back</button><div className={`w-32 h-80 rounded-full shadow-2xl bg-gradient-to-b ${colors[selectedColor].imgGradient}`}></div></div>
+                                    <div><h2 className="text-4xl font-bold mb-2">{selectedProduct?.name}</h2><p className="text-2xl font-medium mb-8">{selectedProduct?.price}</p><div className="mb-8 flex gap-4">{Object.keys(colors).map((k) => <button key={k} onClick={() => setSelectedColor(k)} className={`w-10 h-10 rounded-full border-2 ${selectedColor === k ? 'border-black' : 'border-transparent'}`} style={{ backgroundColor: colors[k].hex }} />)}</div><button className="w-full bg-black text-white py-4 rounded-full font-bold hover:bg-gray-800">Add to Cart</button></div>
+                                </div>
+                            </section>
+                            <section className="py-20 bg-white px-6 max-w-4xl mx-auto">
+                                <div className="mb-20"><h3 className="text-2xl font-black mb-8 border-b pb-4">What's in the box</h3><div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center"><div className="p-6 bg-gray-50 rounded-2xl"><div className="w-12 h-24 bg-gray-300 mx-auto rounded-full mb-4"></div><p className="font-bold text-sm">i Heater</p></div><div className="p-6 bg-gray-50 rounded-2xl"><div className="w-16 h-16 bg-gray-300 mx-auto rounded-xl mb-4"></div><p className="font-bold text-sm">Adapter</p></div><div className="p-6 bg-gray-50 rounded-2xl"><div className="w-20 h-2 bg-gray-300 mx-auto rounded-full my-10"></div><p className="font-bold text-sm">Cable</p></div><div className="p-6 bg-gray-50 rounded-2xl"><div className="w-12 h-12 bg-gray-300 mx-auto rounded-full mb-4"></div><p className="font-bold text-sm">Tool</p></div></div></div>
+                                <div className="mb-20"><h3 className="text-2xl font-black mb-8 border-b pb-4">Technical Specifications</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 text-sm"><div className="flex justify-between py-2 border-b"><span>Dimensions</span><span className="font-bold">105 x 25 x 15 mm</span></div><div className="flex justify-between py-2 border-b"><span>Weight</span><span className="font-bold">21g</span></div><div className="flex justify-between py-2 border-b"><span>Battery</span><span className="font-bold">3200 mAh</span></div><div className="flex justify-between py-2 border-b"><span>Charging</span><span className="font-bold">USB-C</span></div></div></div>
+                                <div><h3 className="text-2xl font-black mb-8 border-b pb-4">Gallery</h3><div className="grid grid-cols-2 gap-4"><div className="bg-gray-100 h-64 rounded-2xl flex items-center justify-center text-gray-400 font-bold">LIFESTYLE 1</div><div className="bg-gray-100 h-64 rounded-2xl flex items-center justify-center text-gray-400 font-bold">CLOSEUP</div></div></div>
+                            </section>
+                        </div>
+                    );
+                }
+            };
+
+            // 4. Technology Page (RENAMED)
+            const TechnologyPage = () => (
+                <div className="animate-fade-in pt-32 pb-20 bg-white">
+                     <div className="max-w-7xl mx-auto px-6">
+                        <div className="text-center mb-24"><span className="text-blue-600 font-bold tracking-widest text-sm mb-4 block">OARA SCIENCE</span><h2 className="text-6xl font-black mb-6">Harm Reduction, Quantified.</h2><p className="text-xl text-gray-500 max-w-2xl mx-auto">Pharmaceutical-grade standards. 95% reduction in harmful constituents.</p></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-32">
+                            <div className="bg-gray-50 rounded-3xl p-12 relative overflow-hidden"><Microscope size={48} className="text-blue-600 mb-6" /><h3 className="text-3xl font-bold mb-4">Chemical Analysis</h3><p className="text-gray-600 mb-8 leading-relaxed">Gas chromatography-mass spectrometry (GC-MS) confirms that OARA's aerosol contains significantly lower levels of Carbon Monoxide and Tar.</p><div className="h-4 bg-gray-200 rounded-full mb-4 overflow-hidden relative"><div className="absolute top-0 left-0 h-full bg-red-500 w-full"></div><span className="absolute right-2 top-0 text-[10px] font-bold text-white">Cigarette (100%)</span></div><div className="h-4 bg-gray-200 rounded-full overflow-hidden relative"><div className="absolute top-0 left-0 h-full bg-blue-500 w-[5%]"></div><span className="absolute left-[6%] top-0 text-[10px] font-bold text-blue-600">OARA (5%)</span></div></div>
+                            <div className="bg-black text-white rounded-3xl p-12 flex flex-col justify-center"><Cpu size={48} className="text-brandYellow mb-6" /><h3 className="text-3xl font-bold mb-4">Precise Heat Control</h3><p className="text-gray-400 leading-relaxed">Combustion happens at >600°C. OARA's SmartChip keeps the temperature strictly below 350°C.</p></div>
+                        </div>
+                        <div className="bg-green-50 rounded-3xl p-12 md:p-20 text-center relative overflow-hidden">
+                            <div className="relative z-10"><div className="inline-block p-4 bg-white rounded-full text-brandGreen mb-6 shadow-sm"><Recycle size={40} /></div><h2 className="text-4xl md:text-5xl font-black text-green-900 mb-6">Green Action Plan</h2><p className="text-green-800 text-lg max-w-2xl mx-auto mb-12">"Pod Recycling Program" allows users to return used sticks for points.</p><div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">{["1. Collect","2. Return","3. Earn"].map((s,i)=><div key={i} className="bg-white p-6 rounded-2xl shadow-sm"><h4 className="font-bold text-green-900 mb-2">{s}</h4><p className="text-sm text-green-700">Follow the steps to recycle.</p></div>)}</div></div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // 5. Service Page (FINAL UPGRADE)
+            const ServicePage = () => (
+                <div className="animate-fade-in pt-32 pb-20 bg-white">
+                    <div className="max-w-5xl mx-auto px-6 text-center">
+                        <h2 className="text-4xl font-black mb-12">OARA Support</h2>
                         
-                        {/* Text Content */}
-                        <div className="flex-1 p-12 md:p-20 z-10 flex flex-col justify-center h-full">
-                            <div className="mb-6">
-                            <span className="text-orange-600 font-bold tracking-wider text-sm uppercase mb-2 block">Pro Series</span>
-                            <h3 className="text-5xl md:text-6xl font-bold text-black mb-6">HNBC</h3>
-                            <p className="text-gray-500 text-xl font-medium leading-relaxed max-w-md">
-                                Designed for the connoisseur. <br/>
-                                Featuring the all-new Oara™ Chip S3 for precise temperature management and extended battery life.
-                            </p>
-                            </div>
-
-                            <div className="space-y-4 mb-10">
-                            <div className="flex items-center gap-3">
-                                <Star size={20} className="text-black fill-black" />
-                                <span className="text-gray-700 font-medium">Premium Aluminum Body</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Zap size={20} className="text-black fill-black" />
-                                <span className="text-gray-700 font-medium">USB-C Fast Charging</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <CheckCircle size={20} className="text-black fill-black" />
-                                <span className="text-gray-700 font-medium">OLED Status Display</span>
-                            </div>
-                            </div>
-
-                            <div className="flex items-center gap-6">
-                                <span className="font-bold text-3xl">$89.00</span>
-                                <button className="bg-black text-white px-10 py-4 rounded-full font-bold hover:bg-[#f6ee52] hover:text-black transition-colors shadow-lg text-lg">
-                                Add to Cart
+                        {/* 1. Authenticity Check */}
+                        <div className="bg-gray-900 text-white p-8 md:p-12 rounded-3xl mb-12 relative overflow-hidden text-left">
+                            <div className="relative z-10 max-w-xl mx-auto text-center">
+                                <div className="inline-block p-3 bg-white/10 rounded-full mb-4"><CheckCircle size={32}/></div>
+                                <h3 className="text-2xl font-bold mb-4">Product Authenticity Check</h3>
+                                <p className="text-gray-400 mb-8">Ensure your device is genuine. Use the Serial Number or scan the QR code.</p>
+                                <div className="bg-white p-2 rounded-xl flex flex-col md:flex-row gap-2 mb-6">
+                                    <input type="text" placeholder="Enter Serial Number (SN)" className="flex-1 p-3 rounded-lg text-black outline-none" />
+                                    <button className="bg-black text-white px-6 py-3 rounded-lg font-bold">Verify</button>
+                                </div>
+                                <button className="mt-6 flex items-center justify-center gap-3 w-full bg-transparent border border-gray-600 hover:bg-gray-800 text-white py-4 rounded-xl transition-all">
+                                    <QrCode /><span className="font-bold">Tap to Scan QR Code</span>
                                 </button>
                             </div>
                         </div>
-                        
-                        {/* Image Content (Right Side) */}
-                        <div className="flex-1 w-full h-full min-h-[400px] md:min-h-full bg-gradient-to-br from-gray-200 to-white relative flex items-center justify-center overflow-hidden">
-                            <div className="absolute inset-0 bg-[linear-gradient(45deg,#00000005_1px,transparent_1px)] bg-[size:20px_20px]"></div>
-                            <div className="text-gray-300 font-bold text-9xl select-none opacity-20">PRO</div>
-                            {/* Product Placeholder */}
-                            <div className="absolute w-[60%] h-[80%] bg-black/5 rounded-2xl border border-white/50 backdrop-blur-sm shadow-2xl flex items-center justify-center">
-                            <span className="text-gray-400 font-mono">PRODUCT RENDER</span>
+
+                        {/* 2. Warranty Check (New) */}
+                        <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 max-w-2xl mx-auto mb-20 text-left">
+                            <h3 className="font-bold text-xl mb-2 flex items-center gap-2"><Award className="text-brandBlack"/> Warranty Status</h3>
+                            <p className="text-gray-500 text-sm mb-6">Check if your device is still under warranty coverage.</p>
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Enter Device SN for Warranty" className="flex-1 p-4 rounded-xl border border-gray-300 outline-none focus:border-black" />
+                                <button className="bg-white border border-black text-black px-8 rounded-xl font-bold hover:bg-black hover:text-white transition-colors">Check</button>
                             </div>
                         </div>
 
-                    </div>
-                    </div>
-                </section>
-
-                {/* === 4. Technology Specs (White Background) === */}
-                <section id="technology" className="py-32 bg-white relative overflow-hidden border-t border-gray-100">
-                    <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-                        <div className="order-2 md:order-1">
-                            <h2 className="text-[#f6ee52] font-black text-sm mb-6 tracking-widest uppercase bg-black inline-block px-2 py-1">Inside OARA</h2>
-                            <h3 className="text-5xl md:text-6xl font-bold text-black mb-8 leading-tight">
-                                Powered by <br/>
-                                <span className="text-gray-400">Oara Intelligent Core.</span>
-                            </h3>
-                            <p className="text-gray-600 text-lg leading-relaxed mb-12 font-medium">
-                                Our proprietary heating algorithm monitors temperature 1,000 times per second. 
-                                Ensuring consistent aerosol delivery without the burnt taste.
-                            </p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                                <div className="bg-gray-50 p-8 rounded-2xl hover:bg-gray-100 transition-colors">
-                                    <Zap className="text-black mb-4 fill-[#f6ee52]" size={32} />
-                                    <h4 className="text-black font-bold mb-2 text-xl">Instant Heat</h4>
-                                    <p className="text-gray-500 text-sm">Ready in 15 seconds.</p>
+                        {/* 3. Customer Support (New Modern Grid) */}
+                        <div className="text-left mb-12">
+                            <h3 className="text-3xl font-bold mb-8 text-center">Customer Support</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="p-8 border border-gray-100 rounded-3xl hover:shadow-xl transition-shadow bg-white text-center group cursor-pointer">
+                                    <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors"><MessageCircle size={32}/></div>
+                                    <h4 className="font-bold text-xl mb-2">Live Chat</h4>
+                                    <p className="text-gray-500 text-sm mb-6">Average wait: 2 mins</p>
+                                    <button className="w-full py-3 rounded-xl bg-blue-50 text-blue-700 font-bold hover:bg-blue-100">Start Chat</button>
                                 </div>
-                                <div className="bg-gray-50 p-8 rounded-2xl hover:bg-gray-100 transition-colors">
-                                    <Battery className="text-black mb-4" size={32} />
-                                    <h4 className="text-black font-bold mb-2 text-xl">All-Day Battery</h4>
-                                    <p className="text-gray-500 text-sm">20 sessions per charge.</p>
+                                <div className="p-8 border border-gray-100 rounded-3xl hover:shadow-xl transition-shadow bg-white text-center group cursor-pointer">
+                                    <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-600 group-hover:text-white transition-colors"><Mail size={32}/></div>
+                                    <h4 className="font-bold text-xl mb-2">Email Ticket</h4>
+                                    <p className="text-gray-500 text-sm mb-6">Response within 24h</p>
+                                    <button className="w-full py-3 rounded-xl bg-green-50 text-green-700 font-bold hover:bg-green-100">Submit Ticket</button>
+                                </div>
+                                <div className="p-8 border border-gray-100 rounded-3xl hover:shadow-xl transition-shadow bg-white text-center group cursor-pointer">
+                                    <div className="w-16 h-16 bg-yellow-50 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-yellow-500 group-hover:text-white transition-colors"><Phone size={32}/></div>
+                                    <h4 className="font-bold text-xl mb-2">Phone Support</h4>
+                                    <p className="text-gray-500 text-sm mb-6">Mon-Fri, 9am-6pm</p>
+                                    <button className="w-full py-3 rounded-xl bg-yellow-50 text-yellow-700 font-bold hover:bg-yellow-100">Call Us</button>
                                 </div>
                             </div>
                         </div>
-                        
-                        {/* Visual for Tech */}
-                        <div className="order-1 md:order-2 relative h-[500px] bg-gray-100 rounded-3xl flex items-center justify-center overflow-hidden group">
-                            <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-50"></div>
-                            <div className="relative w-64 h-64 bg-white rounded-full shadow-2xl flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-700">
-                                <div className="absolute w-full h-full rounded-full border border-dashed border-gray-300 animate-[spin_20s_linear_infinite]"></div>
-                                <span className="text-black font-bold text-2xl font-mono">CHIP S3</span>
-                            </div>
+                    </div>
+                </div>
+            );
+
+            // 8. Community Page (Forum)
+            const CommunityPage = () => {
+                const [filter, setFilter] = useState('All');
+                const brands = ['All', 'Marlboro', 'Lucky Strike', 'Camel', 'Zhonghua', 'Yuxi', '555', 'Others'];
+                const posts = [{ user: "Mike T.", tag: "Marlboro", title: "Finally switched from Marlboro Red", content: "The transition was smoother than I expected.", likes: 124 }, { user: "Sarah L.", tag: "Zhonghua", title: "Comparing with Zhonghua Soft", content: "OARA's aroma is cleaner, but I miss the plum scent a bit.", likes: 89 }];
+                return (
+                    <div className="animate-fade-in pt-32 pb-20 bg-gray-50 min-h-screen">
+                        <div className="max-w-6xl mx-auto px-6">
+                            <div className="text-center mb-12"><h2 className="text-4xl font-black mb-4">The Lounge</h2><p className="text-gray-500">Join the conversation. Share your switch journey.</p></div>
+                            <div className="flex flex-wrap justify-center gap-2 mb-12">{brands.map(b => <button key={b} onClick={() => setFilter(b)} className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${filter === b ? 'bg-black text-white' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>{b}</button>)}</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{posts.map((post, i) => (<div key={i} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"><div className="flex justify-between items-start mb-4"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-400">{post.user[0]}</div><div><h4 className="font-bold text-sm">{post.user}</h4><span className="text-xs text-gray-400">Previous: {post.tag}</span></div></div><div className="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-500">{post.tag}</div></div><h3 className="text-xl font-bold mb-2">{post.title}</h3><p className="text-gray-600 text-sm mb-6">{post.content}</p><div className="flex items-center gap-4 text-xs text-gray-400 font-bold border-t pt-4"><span>👍 {post.likes}</span><span>💬 Comment</span></div></div>))}</div>
                         </div>
                     </div>
-                </section>
+                );
+            };
 
-                {/* === 5. Web CheckList (Verification - Light) === */}
-                <section id="checklist" className="py-24 bg-[#f9f9fb] border-y border-gray-200">
-                    <div className="max-w-3xl mx-auto px-6 text-center">
-                    <div className="inline-block p-4 bg-white rounded-2xl shadow-sm mb-6">
-                        <Shield size={40} className="text-black fill-[#f6ee52]" />
-                    </div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">Authenticity Check</h2>
-                    <p className="text-gray-500 mb-10">
-                        Verify your OARA HNBC device. Enter the 12-digit Serial Number (SN).
-                    </p>
-
-                    <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-xl flex flex-col md:flex-row gap-2 max-w-lg mx-auto focus-within:ring-2 ring-black/5 transition-all">
-                        <input 
-                        type="text" 
-                        placeholder="Enter SN (e.g. OARA-2026-X89)" 
-                        className="flex-1 px-6 py-4 rounded-xl outline-none text-lg bg-transparent text-black placeholder-gray-400"
-                        value={serialNumber}
-                        onChange={(e) => setSerialNumber(e.target.value)}
-                        />
-                        <button 
-                        onClick={handleCheck}
-                        className="bg-black text-white px-8 py-4 rounded-xl font-bold hover:bg-[#f6ee52] hover:text-black transition-colors whitespace-nowrap shadow-md"
-                        >
-                        {checkStatus === 'checking' ? 'Verifying...' : 'Verify'}
-                        </button>
-                    </div>
-
-                    {/* Result Area */}
-                    {checkStatus === 'verified' && (
-                        <div className="mt-8 p-6 bg-white border border-green-200 rounded-xl text-left flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-                            <div className="bg-green-100 text-green-700 p-2 rounded-full mt-1">
-                                <CheckCircle size={20} />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-black text-lg">Authentic Device</h4>
-                                <p className="text-gray-600 mt-1">Device: OARA HNBC (Black). <br/>SN: {serialNumber || 'SN-TEST-01'}</p>
-                                <div className="mt-3 text-xs text-green-700 font-bold bg-green-50 px-2 py-1 rounded inline-block">
-                                    WARRANTY ACTIVE
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    </div>
-                </section>
-
-                {/* === 6. Store Locator (Light Map) === */}
-                <section className="h-[500px] relative w-full bg-gray-200">
-                    {/* Mock Map Background (Light Style) */}
-                    <div className="absolute inset-0 bg-[#e0e0e0] flex items-center justify-center opacity-70">
-                        <div className="text-center">
-                            <MapPin size={64} className="mx-auto mb-4 text-gray-400" />
-                            <p className="text-4xl font-black text-gray-400/50 tracking-widest uppercase">Global Map</p>
-                        </div>
-                    </div>
-                    
-                    {/* Floating Card */}
-                    <div className="absolute top-10 left-6 md:left-20 bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-2xl w-[90%] md:w-[380px]">
-                        <h3 className="text-xl font-bold text-black mb-4">Find a Retailer</h3>
-                        <div className="relative mb-6">
-                            <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                            <input type="text" placeholder="City or Postal Code" className="w-full bg-gray-50 border border-gray-200 text-black rounded-lg pl-10 pr-4 py-3 outline-none focus:border-black transition-colors placeholder-gray-400" />
-                        </div>
-                        
-                        <div className="h-48 overflow-y-auto space-y-3 custom-scrollbar pr-2">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="p-4 hover:bg-gray-50 rounded-xl cursor-pointer border border-transparent hover:border-gray-200 transition-all group">
-                                    <div className="flex justify-between items-start">
-                                        <h4 className="font-bold text-black">OARA Store - Downtown</h4>
-                                        <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded">0.8km</span>
+            // 9. Member Center (全新设计)
+            const MemberPage = () => (
+                <div className="animate-fade-in pt-24 pb-20 bg-gray-50 min-h-screen">
+                    <div className="max-w-6xl mx-auto px-6">
+                        {/* Member Header Card */}
+                        <div className="aurora-bg text-white rounded-3xl p-8 md:p-12 mb-10 relative overflow-hidden shadow-2xl">
+                            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-12 h-12 glass-panel rounded-full flex items-center justify-center text-white"><Award size={24} /></div>
+                                        <div><p className="text-xs text-white/70 uppercase tracking-widest">Welcome back</p><h2 className="text-2xl font-bold">Alex Johnson</h2></div>
                                     </div>
-                                    <p className="text-sm text-gray-500 mt-1">123 Tech Avenue, Innovation District</p>
-                                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1 font-medium">
-                                    ● Open Now
-                                    </p>
+                                    <div className="mt-6 flex items-center gap-2 text-brandBlack bg-white/90 px-3 py-1 rounded-full w-max shadow-lg"><Star fill="#f6ee52" stroke="none" size={16} /><span className="font-bold text-sm">Gold Member</span></div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* === 7. Footer (Dark Contrast) === */}
-                <footer className="bg-[#111] text-white pt-20 pb-12">
-                    <div className="max-w-7xl mx-auto px-6">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
-                            
-                            <div>
-                                <h4 className="text-xs font-bold text-[#f6ee52] tracking-widest uppercase mb-6">Products</h4>
-                                <ul className="space-y-4 text-sm text-gray-400">
-                                    <li><a href="#" className="hover:text-white transition-colors">OARA HNBC</a></li>
-                                    <li><a href="#" className="hover:text-white transition-colors">Accessories</a></li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="text-xs font-bold text-[#f6ee52] tracking-widest uppercase mb-6">Innovation</h4>
-                                <ul className="space-y-4 text-sm text-gray-400">
-                                    <li><a href="#" className="hover:text-white transition-colors">Oara Chip Tech</a></li>
-                                    <li><a href="#" className="hover:text-white transition-colors">Health & Safety</a></li>
-                                    <li><a href="#" className="hover:text-white transition-colors">Check Authenticity</a></li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="text-xs font-bold text-[#f6ee52] tracking-widest uppercase mb-6">Support</h4>
-                                <ul className="space-y-4 text-sm text-gray-400">
-                                    <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                                    <li><a href="#" className="hover:text-white transition-colors">Warranty Policy</a></li>
-                                    <li><a href="#" className="hover:text-white transition-colors">Shipping Info</a></li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="text-xs font-bold text-[#f6ee52] tracking-widest uppercase mb-6">Newsletter</h4>
-                                <p className="text-xs text-gray-500 mb-4">Stay updated on new drops.</p>
-                                <div className="flex border-b border-white/20 pb-2 focus-within:border-[#f6ee52] transition-colors">
-                                    <input type="email" placeholder="Email Address" className="bg-transparent w-full outline-none text-sm placeholder-gray-600 text-white" />
-                                    <button className="text-white hover:text-[#f6ee52] transition-colors"><ArrowRight size={16} /></button>
+                                <div className="glass-panel rounded-2xl p-6 min-w-[200px] text-center">
+                                    <p className="text-white/70 text-xs mb-1">Available Points</p><div className="text-4xl font-black text-white mb-2">2,450</div><button className="text-xs font-bold bg-white text-black px-4 py-2 rounded-full w-full hover:bg-brandYellow transition-colors">Redeem Rewards</button>
                                 </div>
+                            </div>
+                            {/* Progress */}
+                            <div className="mt-10">
+                                <div className="flex justify-between text-xs text-white/70 mb-2"><span>Current: Gold</span><span>Next: Platinum (550 pts to go)</span></div>
+                                <div className="h-2 bg-black/20 rounded-full overflow-hidden"><div className="h-full bg-white w-[70%] rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div></div>
                             </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-600 gap-6 pt-8 border-t border-white/10">
-                            <div className="flex items-center gap-3">
-                                <img 
-                                    src="OARA LOGO.png" 
-                                    alt="OARA Tech Logo" 
-                                    className="h-6 w-auto object-contain opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'block';
-                                    }} 
-                                />
-                                {/* 备用Footer Logo */}
-                                <div className="hidden text-gray-500 font-bold tracking-widest">OARA TECH</div>
-                                <p>&copy; 2026 OARA Tech. All rights reserved.</p>
-                            </div>
+                        {/* Dashboard Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             
-                            <div className="flex gap-8">
-                                <a href="#" className="hover:text-white transition-colors">Privacy</a>
-                                <a href="#" className="hover:text-white transition-colors">Terms</a>
-                                <a href="#" className="hover:text-white transition-colors">Legal</a>
+                            {/* Benefits */}
+                            <div className="md:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Gift className="text-brandYellow fill-brandYellow" /> Exclusive Benefits</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-100"><div className="p-2 bg-white rounded-full shadow-sm"><Truck className="text-gray-600"/></div><div><h4 className="font-bold text-sm">Free Shipping</h4><p className="text-xs text-gray-500">On all orders</p></div></div>
+                                    <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-100"><div className="p-2 bg-white rounded-full shadow-sm"><Clock className="text-gray-600"/></div><div><h4 className="font-bold text-sm">Priority Access</h4><p className="text-xs text-gray-500">New drops 24h early</p></div></div>
+                                    <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-100 opacity-60 grayscale"><div className="p-2 bg-white rounded-full shadow-sm"><Gift className="text-gray-600"/></div><div><h4 className="font-bold text-sm">Birthday Gift</h4><p className="text-xs text-gray-500 flex items-center gap-1"><Lock size={10}/> Unlocks at Platinum</p></div></div>
+                                    <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-100 opacity-60 grayscale"><div className="p-2 bg-white rounded-full shadow-sm"><Star className="text-gray-600"/></div><div><h4 className="font-bold text-sm">Double Points</h4><p className="text-xs text-gray-500 flex items-center gap-1"><Lock size={10}/> Unlocks at Platinum</p></div></div>
+                                </div>
                             </div>
-                            
-                            <div className="flex items-center gap-2 border border-white/10 px-3 py-1 rounded hover:border-white/30 cursor-pointer transition-colors text-white/50 hover:text-white">
-                                <Globe size={12} />
-                                <span>Global (EN) / USD</span>
+
+                            {/* Tasks */}
+                            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                <h3 className="text-xl font-bold mb-6">Earn Points</h3>
+                                <ul className="space-y-4">
+                                    <li className="flex justify-between items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"><span className="text-sm font-medium">Refer a Friend</span><span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">+1000</span></li>
+                                    <li className="flex justify-between items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"><span className="text-sm font-medium">Complete Profile</span><span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">+500</span></li>
+                                    <li className="flex justify-between items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"><span className="text-sm font-medium">Recycle 10 Pods</span><span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">+200</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Recent Orders */}
+                            <div className="md:col-span-3 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold">Recent Orders</h3><button className="text-xs font-bold underline">View All</button></div>
+                                <table className="w-full text-sm text-left"><thead className="text-gray-400 font-normal border-b border-gray-100"><tr><th className="pb-3 pl-2">Order ID</th><th className="pb-3">Date</th><th className="pb-3">Status</th><th className="pb-3">Total</th><th className="pb-3">Action</th></tr></thead><tbody className="font-medium"><tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors"><td className="py-4 pl-2">#ORD-2026-8821</td><td className="py-4 text-gray-500">Jan 5, 2026</td><td className="py-4"><span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Delivered</span></td><td className="py-4">$112.00</td><td className="py-4"><button className="text-xs border border-gray-200 px-3 py-1 rounded hover:bg-black hover:text-white transition-colors">Track</button></td></tr><tr className="hover:bg-gray-50 transition-colors"><td className="py-4 pl-2">#ORD-2025-1102</td><td className="py-4 text-gray-500">Dec 12, 2025</td><td className="py-4"><span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">Completed</span></td><td className="py-4">$45.00</td><td className="py-4"><button className="text-xs border border-gray-200 px-3 py-1 rounded hover:bg-black hover:text-white transition-colors">Buy Again</button></td></tr></tbody></table>
                             </div>
                         </div>
                     </div>
-                </footer>
+                </div>
+            );
+
+            // Reused Pages
+            const PodPage = () => <div className="animate-fade-in pt-32 pb-20 bg-white"><div className="max-w-6xl mx-auto px-6"><div className="text-center mb-16"><span className="text-blue-600 font-bold tracking-widest uppercase text-sm mb-4 block">Hydro-Fusion Series</span><h2 className="text-5xl font-black mb-6">Flavor Reimagined</h2></div><div className="grid grid-cols-1 md:grid-cols-3 gap-8">{[{n:'Mellow',c:'bg-yellow-50',t:'bg-yellow-400'},{n:'Bold',c:'bg-red-50',t:'bg-red-600'},{n:'Ocean',c:'bg-blue-50',t:'bg-blue-500'}].map((o,i)=><div key={i} className={`${o.c} rounded-3xl h-[400px] flex flex-col items-center justify-center p-6 hover:shadow-xl transition-all`}><div className={`w-4 h-56 ${o.t} rounded-full shadow-lg mb-8`}></div><h3 className="text-3xl font-black">{o.n}</h3></div>)}</div></div></div>;
+            const AccessoriesPage = () => <div className="animate-fade-in pt-32 pb-20 bg-[#f9f9f9]"><div className="max-w-6xl mx-auto px-6"><h2 className="text-4xl font-black mb-12 text-center">Essential Add-ons</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-8">{[{n:"Charging Dock",p:"$29"},{n:"Cleaning Kit",p:"$15"},{n:"Leather Case",p:"$35"}].map((x,i)=><div key={i} className="bg-white p-8 rounded-3xl flex flex-col items-center text-center shadow-sm hover:shadow-lg"><div className="w-40 h-40 bg-gray-50 rounded-2xl mb-6"></div><h3 className="text-xl font-bold">{x.n}</h3><span className="font-bold text-lg">{x.p}</span></div>)}</div></div></div>;
+            const AboutPage = () => <div className="animate-fade-in pt-32 pb-20 bg-white"><div className="max-w-6xl mx-auto px-6"><div className="grid md:grid-cols-2 gap-20 items-center"><div><h2 className="text-5xl font-black mb-6">Take 3, Break Waste.</h2><p className="text-xl text-gray-500">Founded in 2024, our mission is to eliminate combustion.</p></div><div className="bg-gray-200 h-[400px] rounded-3xl"></div></div></div></div>;
+            const JournalPage = () => <div className="animate-fade-in pt-32 pb-20 bg-white"><div className="max-w-6xl mx-auto px-6"><h2 className="text-4xl font-black mb-12">The Journal</h2><div className="grid md:grid-cols-3 gap-10">{[1,2,3].map(i=><div key={i} className="group"><div className="bg-gray-100 h-60 rounded-2xl mb-6"></div><h3 className="text-xl font-bold group-hover:underline">Future of HNBC</h3></div>)}</div></div></div>;
+
+            return (
+                <div className="bg-white text-black selection:bg-brandYellow selection:text-black min-h-screen flex flex-col">
+                    <PromoTicker />
+                    <header className="sticky top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100">
+                        <div className="max-w-7xl mx-auto px-6 py-4 grid grid-cols-3 items-center">
+                            <div className="flex items-center justify-start">
+                                <button className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-gray-600 transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                                    <Menu size={20} /> <span className="hidden md:inline">Menu</span>
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-center">
+                                <a href="#" onClick={(e) => {e.preventDefault(); navigateTo('home');}} className="flex items-center">
+                                    <img src="OARA LOGO.png" alt="OARA" className="h-8 object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                    <div className="hidden text-2xl font-black tracking-tight">OARA</div>
+                                </a>
+                            </div>
+                            <div className="flex items-center justify-end gap-5">
+                                <button className="text-xs font-bold border border-black rounded px-2 py-1 hover:bg-black hover:text-white transition-all hidden md:block">EN / USD</button>
+                                <button className="hover:opacity-60"><Search size={20} /></button>
+                                <button className="hover:opacity-60 text-brandBlack" onClick={() => navigateTo('member')} title="Member Center"><User size={20} className={activePage === 'member' ? 'fill-black' : ''} /></button>
+                                <button className="relative hover:opacity-60">
+                                    <ShoppingBag size={20} />
+                                    {quantity > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-brandYellow rounded-full border border-white"></span>}
+                                </button>
+                            </div>
+                        </div>
+                        {mobileMenuOpen && (
+                            <div className="absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-xl py-8 px-6 flex flex-col items-center animate-fade-in">
+                                <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-8 text-center w-full max-w-7xl">
+                                    {['device', 'pod', 'accessories', 'technology', 'service', 'community', 'about', 'journal'].map((id) => (
+                                        <button key={id} onClick={() => navigateTo(id)} className={`text-lg font-bold uppercase hover:text-brandYellow transition-colors ${activePage === id ? 'text-black underline underline-offset-4' : 'text-gray-500'}`}>
+                                            {id === 'technology' ? 'OARA Science' : (id === 'community' ? 'Community' : id)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </header>
+
+                    <main className="flex-grow">
+                        {activePage === 'home' && (
+                            <div>
+                                <section className="pt-12 px-6 max-w-7xl mx-auto min-h-[75vh] flex flex-col justify-center relative">
+                                    <div className="flex flex-col md:flex-row items-end justify-between mb-8">
+                                        <div>
+                                            <span className="bg-black text-white text-xs font-bold px-2 py-1 mb-4 inline-block">2026 New Arrive</span>
+                                            <h1 className="text-6xl md:text-8xl font-bold leading-none mb-6">Anyone,<br/>Take 3 break<br/><span className="text-gray-400">waste!</span></h1>
+                                            <button onClick={() => navigateTo('device')} className="text-sm font-bold border-b border-black pb-0.5 hover:text-gray-600">View All ></button>
+                                        </div>
+                                        <div className="w-full md:w-1/2 h-[350px] bg-gray-100 rounded-3xl mt-8 md:mt-0 flex items-center justify-center relative overflow-hidden">
+                                            <div className="text-gray-300 font-bold text-8xl opacity-30">2026</div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {products.map((p) => (
+                                            <div key={p.id} onClick={() => { handleProductClick(p); setActivePage('device'); }} className="group cursor-pointer">
+                                                <div className="bg-[#f5f5f7] rounded-xl h-64 flex items-center justify-center mb-3 relative overflow-hidden hover:shadow-md transition-all">
+                                                    <div className={`w-20 h-48 bg-gradient-to-b ${colors[p.colorKey].imgGradient} rounded-full shadow-lg`}></div>
+                                                </div>
+                                                <div className="flex justify-between items-center px-1"><span className="font-bold text-sm">{p.name}</span><span className="font-bold text-sm">{p.price}</span></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                                <div className="flex justify-center gap-8 md:gap-16 py-16 text-sm font-bold uppercase tracking-widest text-gray-400">
+                                    <button onClick={() => navigateTo('device')} className="text-black hover:underline">Device ></button>
+                                    <button onClick={() => navigateTo('pod')} className="hover:text-black">Pod ></button>
+                                    <button onClick={() => navigateTo('accessories')} className="hover:text-black">Accessories ></button>
+                                </div>
+                                <AIFAQSection />
+                                <StoreLocator />
+                            </div>
+                        )}
+                        {activePage === 'device' && <DevicePage />}
+                        {activePage === 'pod' && <PodPage />}
+                        {activePage === 'accessories' && <AccessoriesPage />}
+                        {activePage === 'technology' && <TechnologyPage />}
+                        {activePage === 'service' && <ServicePage />}
+                        {activePage === 'member' && <MemberPage />}
+                        {activePage === 'community' && <CommunityPage />}
+                        {activePage === 'about' && <AboutPage />}
+                        {activePage === 'journal' && <JournalPage />}
+                    </main>
+
+                    <footer className="bg-white border-t border-gray-100 py-12 text-center text-xs text-gray-400">
+                        <div className="flex justify-center gap-6 mb-8"><a href="#" className="hover:text-black">Privacy</a><a href="#" className="hover:text-black">Terms</a><a href="#" className="hover:text-black">Contact</a></div>
+                        <p>&copy; 2026 OARA Tech.</p>
+                    </footer>
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<OARAWebsiteSingleProduct />);
+        root.render(<OARAWeb />);
     </script>
 </body>
 </html>
