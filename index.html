@@ -139,6 +139,48 @@
         const { ShoppingBag, User, Search, Menu, X, Plus, Minus, MapPin, ChevronDown, Star, Zap, Droplet, MessageCircle, QrCode, Microscope, Recycle, Mail, Phone, Cpu, Gift, Award, Box, Leaf, Sparkles, Bot, CheckCircle, Clock, Lock, Unlock, Truck, ArrowRight, Heart, Eye, Send, Globe } = Icons;
 
         // --- 1. Top Components ---
+        // --- 新增组件：AgeGate ---
+const AgeGate = () => {
+    const [isVerified, setIsVerified] = useState(false);
+
+    useEffect(() => {
+        const verified = localStorage.getItem('oara_age_verified');
+        if (verified) setIsVerified(true);
+    }, []);
+
+    const handleVerify = () => {
+        localStorage.setItem('oara_age_verified', 'true');
+        setIsVerified(true);
+    };
+
+    if (isVerified) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-white px-6 text-center animate-fade-in">
+            <div className="w-20 h-20 bg-brandYellow rounded-full flex items-center justify-center mb-8">
+                <span className="text-black font-black text-2xl">18+</span>
+            </div>
+            <h1 className="text-4xl font-black mb-4">Age Verification</h1>
+            <p className="text-gray-400 mb-10 max-w-md">
+                To enter this site, you must be of legal smoking age in your jurisdiction.
+            </p>
+            <div className="flex flex-col gap-4 w-full max-w-xs">
+                <button 
+                    onClick={handleVerify}
+                    className="bg-brandYellow text-black py-4 rounded-xl font-bold text-lg hover:bg-white transition-colors"
+                >
+                    I am over 18
+                </button>
+                <button 
+                    onClick={() => window.location.href = 'https://google.com'}
+                    className="border border-gray-700 text-gray-500 py-4 rounded-xl font-bold text-lg hover:text-white hover:border-white transition-colors"
+                >
+                    Exit
+                </button>
+            </div>
+        </div>
+    );
+};
         const PromoTicker = () => (
             <div className="bg-brandBlack text-brandYellow py-2 overflow-hidden relative z-[60]">
                 <div className="whitespace-nowrap animate-marquee flex items-center gap-10 text-xs font-bold tracking-widest uppercase">
@@ -591,7 +633,7 @@
                 window.scrollTo(0, 0);
             };
 
-            const triggerAddToCart = () => {
+            const triggerAddToCart = (product) => {
                 setCartCount(c => c + 1);
                 setCartAnimating(true);
                 setTimeout(() => setCartAnimating(false), 500); // Reset animation
@@ -917,3 +959,4 @@
     </script>
 </body>
 </html>
+
